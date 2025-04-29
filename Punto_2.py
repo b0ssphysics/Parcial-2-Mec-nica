@@ -1,8 +1,24 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.special import rel_entr
+import matplotlib as mpl
 
-# Experimental data (25 throws per die) with ±0.05 error
+# Set professional style
+plt.style.use('seaborn-paper')
+mpl.rcParams.update({
+    'font.family': 'serif',
+    'font.serif': ['Times New Roman'],
+    'text.usetex': True,  # Enable LaTeX rendering
+    'axes.labelsize': 10,
+    'axes.titlesize': 12,
+    'xtick.labelsize': 9,
+    'ytick.labelsize': 9,
+    'legend.fontsize': 8,
+    'figure.dpi': 300,
+    'savefig.dpi': 300,
+    'figure.autolayout': True
+})
+
+# Experimental data
 experimental_probs = np.array([
     [6, 4, 7, 2, 7, 4, 1],  # Side 1
     [6, 4, 1, 7, 5, 5, 8],  # Side 2
@@ -10,11 +26,9 @@ experimental_probs = np.array([
     [2, 5, 5, 4, 1, 2, 4],  # Side 4
     [4, 5, 3, 7, 7, 4, 11], # Side 5
     [5, 6, 4, 1, 3, 6, 1]   # Side 6
-]) / 25  # Convert to probabilities
+]) / 25
 
-experimental_error = 0.05  # Measurement uncertainty
-
-# Truncation factors
+experimental_error = 0.05
 f_values = np.array([2.0, 1.9, 1.8, 1.7, 1.6, 1.5, 1.4])
 
 # Theoretical probabilities
@@ -27,49 +41,69 @@ def face_probabilities(f):
 theoretical_probs = np.array([face_probabilities(f) for f in f_values])
 
 # Create figure
-plt.figure(figsize=(14, 8))
-plt.suptitle("Experimental vs Theoretical Face Probabilities with Measurement Error Bars", y=1.02)
+fig, ax = plt.subplots(figsize=(6.5, 4))  # Single-column width for LaTeX
 
-# Main plot comparing probabilities
-ax1 = plt.subplot(211)
-x = np.arange(6)  # Faces 1-6
-width = 0.1
+# Use a perceptually uniform colormap
+colors = plt.cm.plasma(np.linspace(0.1, 0.9, len(f_values)))
 
-# Color palette for different f-values
-colors = plt.cm.viridis(np.linspace(0, 1, len(f_values)))
+# Plot parameters
+face_labels = ['Face 1', 'Face 2', 'Face 3', 'Face 4', 'Face 5', 'Face 6']
+x = np.arange(len(face_labels))
+width = 0.3  # Spacing between groups
 
+# Plot experimental and theoretical data
 for i, f in enumerate(f_values):
-    offset = width * (i - 3)
-    # Experimental with error bars
-    ax1.errorbar(x + offset, experimental_probs[:,i], 
-                yerr=experimental_error, fmt='o',
-                color=colors[i], markersize=8, capsize=5,
-                label=f'f={f} Exp')
+    offset = width * (i - len(f_values)/2) / len(f_values)
+    
+    # Experimental data with error bars
+    ax.errorbar(x + offset, experimental_probs[:,i], yerr=experimental_error,
+               fmt='o', color=colors[i], markersize=5, capsize=2, capthick=1,
+               elinewidth=1, label=f'Exp, f={f:.1f}' if i == 0 else "")
+    
     # Theoretical predictions
-    ax1.plot(x + offset, theoretical_probs[i,:], 's', 
-            markerfacecolor='none', markeredgecolor=colors[i],
-            markersize=8, markeredgewidth=2, label=f'f={f} Theo')
+    ax.plot(x + offset, theoretical_probs[i,:], 's', 
+           markerfacecolor='none', markeredgecolor=colors[i],
+           markersize=5, markeredgewidth=1, 
+           label=f'Theo, f={f:.1f}' if i == 0 else "")
 
-ax1.set_xticks(x)
-ax1.set_xticklabels(['Face 1', 'Face 2', 'Face 3', 'Face 4', 'Face 5', 'Face 6'])
-ax1.set_ylabel("Probability")
-ax1.grid(True, alpha=0.3)
-ax1.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
+# Add connecting lines
+for face in range(len(face_labels)):
+    for f_idx in range(len(f_values)):
+        x_pos = face + width * (f_idx - len(f_values)/2) / len(f_values)
+        ax.plot([x_pos, x_pos], 
+               [experimental_probs[face, f_idx] - experimental_error,
+                experimental_probs[face, f_idx] + experimental_error],
+               color=colors[f_idx], alpha=0.2, linestyle='-', linewidth=0.5)
 
-# KL divergence plot
-ax2 = plt.subplot(212)
-kl_divergences = []
-for i, f in enumerate(f_values):
-    kl = np.sum(rel_entr(experimental_probs[:,i], theoretical_probs[i,:])) / np.log(2)
-    kl_divergences.append(kl)
+# Formatting
+ax.set_xticks(x)
+ax.set_xticklabels(face_labels)
+ax.set_ylabel('Probability', fontsize=10)
+ax.grid(True, linestyle=':', alpha=0.4, linewidth=0.5)
+ax.set_axisbelow(True)
 
-ax2.bar(range(len(f_values)), kl_divergences, color=colors)
-ax2.set_xticks(range(len(f_values)))
-ax2.set_xticklabels([f'f={f:.1f}' for f in f_values])
-ax2.set_xlabel("Truncation Factor (f)")
-ax2.set_ylabel("KL Divergence (bits)")
-ax2.set_title("Goodness-of-Fit Between Experimental and Theoretical Distributions")
-ax2.grid(True, alpha=0.3)
+# Custom legend
+from matplotlib.lines import Line2D
+legend_elements = [
+    Line2D([0], [0], marker='o', color='w', label='Experimental',
+           markerfacecolor='k', markersize=6),
+    Line2D([0], [0], marker='s', color='w', label='Theoretical',
+           markerfacecolor='none', markeredgecolor='k', markersize=6)
+]
 
-plt.tight_layout()
+ax.legend(handles=legend_elements, loc='upper right', framealpha=1)
+
+# Add colorbar for f-values
+norm = mpl.colors.Normalize(vmin=f_values.min(), vmax=f_values.max())
+sm = plt.cm.ScalarMappable(cmap='plasma', norm=norm)
+sm.set_array([])
+cbar = fig.colorbar(sm, ax=ax, orientation='vertical', pad=0.02, aspect=40)
+cbar.set_label('Truncation factor $f$', fontsize=9)
+cbar.ax.tick_params(labelsize=8)
+
+# Adjust layout
+plt.tight_layout(pad=1.0)
+
+# Save for LaTeX (uncomment when ready)
+# plt.savefig('die_probabilities.pdf', bbox_inches='tight', pad_inches=0.01)
 plt.show()
