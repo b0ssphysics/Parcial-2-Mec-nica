@@ -1,0 +1,14 @@
+There was a cited reference on the Doc that was missing
+
+@article{Riemer_2013,
+   title={Cuboidal dice and Gibbs distributions},
+   volume={77},
+   ISSN={1435-926X},
+   url={http://dx.doi.org/10.1007/s00184-013-0435-y},
+   DOI={10.1007/s00184-013-0435-y},
+   number={2},
+   journal={Metrika},
+   publisher={Springer Science and Business Media LLC},
+   author={Riemer, Wolfgang and Stoyan, Dietrich and Obreschkow, Danail},
+   year={2013},
+   month=mar, pages={247–256} }
